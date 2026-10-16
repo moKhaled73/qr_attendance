@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const QRCode = require("qrcode");
 
 const Student = require("../models/Student.js");
+const Settings = require("../models/Settings");
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -128,6 +129,28 @@ router.post("/import", upload.single("file"), async (req, res) => {
         courseCode,
         courseName,
       });
+    }
+
+    if (students.length > 0) {
+      const { courseCode, courseName } = students[0];
+      console.log("hi");
+
+      await Settings.findOneAndUpdate(
+        { courseCode },
+        {
+          $set: { courseName },
+          $setOnInsert: {
+            semesterName: "الفصل الدراسي الحالي",
+            totalWeeks: 12,
+            currentWeek: 1,
+            closedWeeks: [],
+          },
+        },
+        {
+          upsert: true,
+          setDefaultsOnInsert: true,
+        },
+      );
     }
 
     let inserted = 0;

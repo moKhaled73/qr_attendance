@@ -161,7 +161,6 @@ button:hover {
 }
 
 .tab-button {
-  flex: 1;
   min-width: 140px;
   width: auto;
   margin: 0;

@@ -2,42 +2,32 @@
 
 document
 
-   .getElementById("loginForm")
+  .getElementById("loginForm")
 
-   .addEventListener("submit", async (event) => {
+  .addEventListener("submit", async (event) => {
+    event.preventDefault();
 
-      event.preventDefault();
+    try {
+      const data = await api("/api/auth/login", {
+        method: "POST",
 
-      try {
+        headers: { "Content-Type": "application/json" },
 
-         const data = await api("/api/auth/login", {
+        body: JSON.stringify({
+          username: document.getElementById("username").value,
 
-            method: "POST",
+          password: document.getElementById("password").value,
+        }),
+      });
 
-            headers: { "Content-Type": "application/json" },
+      showMessage(data.message || "تم تسجيل الدخول");
 
-            body: JSON.stringify({
+      showDashboard();
+    } catch (error) {
+      console.error("Login failed:", error);
 
-               username: document.getElementById("username").value,
+      alert(error.message || "تعذر تسجيل الدخول");
 
-               password: document.getElementById("password").value,
-
-            }),
-
-         });
-
-         showMessage(data.message || "تم تسجيل الدخول");
-
-         showDashboard();
-
-      } catch (error) {
-
-         console.error("Login failed:", error);
-
-         alert(error.message || "تعذر تسجيل الدخول");
-
-         showMessage(error.message, true);
-
-      }
-
-   });
+      showMessage(error.message, true);
+    }
+  });
