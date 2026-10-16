@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>نظام حضور الطلاب</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <div class="header-row">
+        <h1>نظام حضور الطلاب بالـ QR</h1>
+
+        <button id="logoutBtn" class="secondary hidden header-logout">
+          تسجيل الخروج
+        </button>
+      </div>
+
+      <div id="message" class="hidden"></div>
+
+      <section id="loginSection" class="card">
+        <h2>تسجيل الدخول</h2>
+        <form id="loginForm">
+          <label for="username">اسم المستخدم</label>
+          <input
+            id="username"
+            name="username"
+            autocomplete="username"
+            required
+          />
+
+          <label for="password">كلمة المرور</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+
+          <button type="submit">دخول</button>
+        </form>
+      </section>
+
+      <section id="dashboard" class="hidden">
+        <div class="card">
+          <h2>لوحة التحكم</h2>
+          <p>أهلًا بك. اختر العملية التي تريد تنفيذها.</p>
+
+          <div class="tabs">
+            <button
+              type="button"
+              class="tab-button active"
+              data-tab="studentsTab"
+            >
+              استيراد الطلاب
+            </button>
+
+            <button type="button" class="tab-button" data-tab="qrExportTab">
+              QR الطلاب
+            </button>
+
+            <button type="button" class="tab-button" data-tab="weekTab">
+              أسبوع الحضور
+            </button>
+
+            <button type="button" class="tab-button" data-tab="exportTab">
+              كشف الحضور
+            </button>
+          </div>
+        </div>
+
+        <div id="studentsTab" class="tab-content">
+          <div class="card upload-card">
+            <div class="upload-heading">
+              <div>
+                <h2>استيراد بيانات الطلاب</h2>
+                <p class="muted">
+                  ارفع ملف Excel لإضافة الطلاب وبيانات المواد إلى النظام.
+                </p>
+              </div>
+            </div>
+
+            <label
+              for="studentsFile"
+              class="upload-dropzone"
+              id="uploadDropzone"
+            >
+              <div class="upload-cloud-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="38"
+                  height="38"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 16V4" />
+                  <path d="m7 9 5-5 5 5" />
+                  <path
+                    d="M20 16.5v2A2.5 2.5 0 0 1 17.5 21h-11A2.5 2.5 0 0 1 4 18.5v-2"
+                  />
+                </svg>
+              </div>
+
+              <span class="upload-main-text">اضغط لاختيار ملف Excel</span>
+              <span class="upload-sub-text">أو اسحب الملف وأفلته هنا</span>
+              <span class="upload-format">XLSX · الحد الأقصى 5 MB</span>
+
+              <input id="studentsFile" type="file" accept=".xlsx" hidden />
+            </label>
+
+            <div id="selectedFileInfo" class="selected-file hidden">
+              <div class="file-type-icon">XLSX</div>
+
+              <div class="file-details">
+                <span id="selectedFileName" class="file-name"></span>
+                <span id="selectedFileSize" class="file-size"></span>
+              </div>
+
+              <button
+                type="button"
+                id="removeSelectedFile"
+                class="remove-file-btn"
+                aria-label="إزالة الملف المختار"
+                title="إزالة الملف"
+              >
+                ×
+              </button>
+            </div>
+
+            <div class="upload-actions">
+              <button id="importBtn" type="button" disabled>
+                استيراد الطلاب
+              </button>
+            </div>
+
+            <p class="upload-hint">
+              تأكد أن الملف يحتوي على الأعمدة المطلوبة:
+              <span dir="ltr"
+                >studentCode, studentName, section, courseCode, courseName</span
+              >
+            </p>
+          </div>
+        </div>
+
+        <!-- Tab تصدير QR الطلاب -->
+        <div id="qrExportTab" class="tab-content hidden">
+          <div class="card">
+            <h2>QR Codes للطلاب</h2>
+
+            <p class="muted">
+              أدخل كود المادة لتنزيل ملف Excel يحتوي على كود الطالب واسمه وكود
+              المادة وصورة QR الخاصة به.
+            </p>
+
+            <label for="qrCourseCode">كود المادة</label>
+            <input
+              type="text"
+              id="qrCourseCode"
+              placeholder="مثال: CS101"
+              maxlength="30"
+              required
+            />
+
+            <button id="exportQrBtn">تنزيل ملف QR للطلاب</button>
+          </div>
+        </div>
+
+        <!-- Tab أسبوع الحضور -->
+        <div id="weekTab" class="tab-content hidden">
+          <div class="card">
+            <h2>أسبوع الحضور</h2>
+
+            <label for="courseCode">كود المادة</label>
+            <input
+              id="courseCode"
+              type="text"
+              placeholder="مثال: CS101"
+              maxlength="30"
+              required
+            />
+
+            <label for="week">الأسبوع الحالي</label>
+            <input id="week" type="number" min="1" max="30" value="1" />
+
+            <button id="setWeekBtn">تحديد الأسبوع</button>
+
+            <button id="closeWeekBtn" class="danger">
+              إغلاق الأسبوع وتسجيل الغياب
+            </button>
+          </div>
+
+          <div class="card">
+            <h2>مسح QR وتسجيل الحضور</h2>
+
+            <label for="cameraSelect">اختيار الكاميرا</label>
+            <select id="cameraSelect">
+              <option value="">اضغط على تشغيل الكاميرا أولًا</option>
+            </select>
+
+            <button id="startScannerBtn">تشغيل الكاميرا</button>
+            <button id="stopScannerBtn" class="secondary">
+              إيقاف الكاميرا
+            </button>
+
+            <div
+              id="reader"
+              style="width: 100%; max-width: 500px; margin: 16px auto"
+            ></div>
+
+            <div id="scanResult" aria-live="polite">جاهز لمسح QR الطالب.</div>
+          </div>
+        </div>
+
+        <!-- Tab كشف الحضور -->
+        <div id="exportTab" class="tab-content hidden">
+          <div class="card">
+            <h2>كشف الحضور</h2>
+            <p class="muted">تنزيل كشف الترم للمادة المحددة بصيغة Excel.</p>
+
+            <label for="exportCourseCode">كود المادة</label>
+            <input
+              id="exportCourseCode"
+              type="text"
+              placeholder="مثال: CS101"
+              maxlength="30"
+              required
+            />
+
+            <button id="exportBtn" type="button">تصدير Excel</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="/js/01-upload.js" defer></script>
+    <script src="/js/02-tabs.js" defer></script>
+    <script src="/js/03-core.js" defer></script>
+    <script src="/js/04-login.js" defer></script>
+    <script src="/js/05-students-import.js" defer></script>
+    <script src="/js/06-attendance-weeks.js" defer></script>
+    <script src="/js/07-exports.js" defer></script>
+    <script src="/js/08-logout-session.js" defer></script>
+    <script src="/js/09-scanner.js" defer></script>
+
+    <script src="/vendor/html5-qrcode/html5-qrcode.min.js"></script>
+  </body>
+</html>
