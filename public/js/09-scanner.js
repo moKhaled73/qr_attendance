@@ -1,3 +1,44 @@
+const scanCourseSelect = document.getElementById("scanCourseCode");
+const currentWeekStatus = document.getElementById("currentWeekStatus");
+const registrationStatus = document.getElementById("registrationStatus");
+
+scanCourseSelect.addEventListener("change", async () => {
+  const courseCode = scanCourseSelect.value;
+
+  if (!courseCode) {
+    currentWeekStatus.textContent = "اختر المادة لعرض حالة الحضور.";
+    registrationStatus.textContent = "";
+    return;
+  }
+
+  currentWeekStatus.textContent = "جاري تحميل بيانات المادة...";
+  registrationStatus.textContent = "";
+
+  try {
+    const response = await fetch(
+      `/api/attendance/course-status?courseCode=${encodeURIComponent(courseCode)}`,
+      {
+        credentials: "same-origin",
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "تعذر تحميل حالة الحضور.");
+    }
+
+    currentWeekStatus.textContent = `المادة: ${data.courseName || data.courseCode} — الأسبوع الحالي: ${data.currentWeek}`;
+
+    registrationStatus.textContent = data.isClosed
+      ? "🔒 التسجيل مغلق لهذا الأسبوع"
+      : "✅ التسجيل مفتوح لهذا الأسبوع";
+  } catch (error) {
+    currentWeekStatus.textContent = error.message;
+    registrationStatus.textContent = "";
+  }
+});
+
 const cameraSelect = document.getElementById("cameraSelect");
 
 const startScannerBtn = document.getElementById("startScannerBtn");
@@ -19,245 +60,178 @@ let lastScannedToken = "";
 let lastScannedAt = 0;
 
 function getSelectedCourseCode() {
+  const input = document.getElementById("scanCourseCode");
+  const courseCode = input?.value.trim();
 
-   const input = document.getElementById("courseCode");
+  if (!courseCode) {
+    showScanResult("من فضلك أدخل كود المادة أولًا.", false);
 
-   const courseCode = input?.value.trim();
+    input?.focus();
 
-   if (!courseCode) {
+    return null;
+  }
 
-      showScanResult("من فضلك أدخل كود المادة أولًا.", false);
-
-      input?.focus();
-
-      return null;
-
-   }
-
-   return courseCode;
-
+  return courseCode;
 }
 
 function showScanResult(text, success = true) {
+  scanResult.textContent = text;
 
-   scanResult.textContent = text;
-
-   scanResult.className = success ? "success" : "error";
-
+  scanResult.className = success ? "success" : "error";
 }
 
 async function startScanner() {
+  if (starting || scanning) return;
 
-   if (starting || scanning) return;
+  starting = true;
 
-   starting = true;
+  startScannerBtn.disabled = true;
 
-   startScannerBtn.disabled = true;
+  try {
+    if (typeof Html5Qrcode === "undefined") {
+      throw new Error("مكتبة html5-qrcode لم يتم تحميلها");
+    }
 
-   try {
+    showScanResult("جارٍ البحث عن الكاميرات...");
 
-      if (typeof Html5Qrcode === "undefined") {
+    const cameras = await Html5Qrcode.getCameras();
 
-         throw new Error("مكتبة html5-qrcode لم يتم تحميلها");
+    if (!cameras.length) {
+      throw new Error("لم يتم العثور على كاميرا");
+    }
 
-      }
+    cameraSelect.replaceChildren();
 
-      showScanResult("جارٍ البحث عن الكاميرات...");
+    cameras.forEach((camera, index) => {
+      const option = document.createElement("option");
 
-      const cameras = await Html5Qrcode.getCameras();
+      option.value = camera.id;
 
-      if (!cameras.length) {
+      option.textContent = camera.label || `كاميرا ${index + 1}`;
 
-         throw new Error("لم يتم العثور على كاميرا");
+      cameraSelect.appendChild(option);
+    });
 
-      }
+    const preferredCamera =
+      cameras.find((camera) =>
+        /back|rear|environment|خلف/i.test(camera.label || ""),
+      ) || cameras[0];
 
-      cameraSelect.replaceChildren();
+    cameraSelect.value = preferredCamera.id;
 
-      cameras.forEach((camera, index) => {
+    // أنشئ قارئًا جديدًا فقط إذا لم يكن موجودًا.
 
-         const option = document.createElement("option");
+    if (!qrScanner) {
+      qrScanner = new Html5Qrcode("reader");
+    }
 
-         option.value = camera.id;
+    showScanResult("جارٍ تشغيل الكاميرا...");
 
-         option.textContent = camera.label || `كاميرا ${index + 1}`;
+    await qrScanner.start(
+      { deviceId: { exact: cameraSelect.value } },
 
-         cameraSelect.appendChild(option);
+      {
+        fps: 10,
 
-      });
+        qrbox: (width, height) => {
+          const size = Math.floor(Math.min(width, height) * 0.7);
 
-      const preferredCamera =
+          return { width: size, height: size };
+        },
+      },
 
-         cameras.find((camera) =>
+      async (decodedText) => {
+        const now = Date.now();
 
-            /back|rear|environment|خلف/i.test(camera.label || ""),
+        // منع إرسال نفس الرمز عدة مرات متتالية.
 
-         ) || cameras[0];
+        if (
+          processingScan ||
+          (decodedText === lastScannedToken && now - lastScannedAt < 2000)
+        ) {
+          return;
+        }
 
-      cameraSelect.value = preferredCamera.id;
+        processingScan = true;
 
-      // أنشئ قارئًا جديدًا فقط إذا لم يكن موجودًا.
+        lastScannedToken = decodedText;
 
-      if (!qrScanner) {
+        lastScannedAt = now;
 
-         qrScanner = new Html5Qrcode("reader");
+        try {
+          const selectedCourseCode = getSelectedCourseCode();
 
-      }
+          if (!selectedCourseCode) return;
 
-      showScanResult("جارٍ تشغيل الكاميرا...");
+          const data = await api("/api/attendance/scan", {
+            method: "POST",
 
-      await qrScanner.start(
+            headers: {
+              "Content-Type": "application/json",
 
-         { deviceId: { exact: cameraSelect.value } },
-
-         {
-
-            fps: 10,
-
-            qrbox: (width, height) => {
-
-               const size = Math.floor(Math.min(width, height) * 0.7);
-
-               return { width: size, height: size };
-
+              "X-Requested-With": "AttendanceApp",
             },
 
-         },
+            body: JSON.stringify({
+              token: decodedText,
 
-         async (decodedText) => {
+              courseCode: selectedCourseCode,
+            }),
+          });
 
-            const now = Date.now();
+          showScanResult(`✅ ${data.message}\nالأسبوع: ${data.week}`);
+        } catch (error) {
+          showScanResult(`⚠️ ${error.message}`, false);
+        } finally {
+          setTimeout(() => {
+            processingScan = false;
+          }, 1000);
+        }
+      },
+    );
 
-            // منع إرسال نفس الرمز عدة مرات متتالية.
+    scanning = true;
 
-            if (
+    // فحص هل المتصفح يعرض إطارات فيديو فعلية.
 
-               processingScan ||
+    const video = document.querySelector("#reader video");
 
-               (decodedText === lastScannedToken && now - lastScannedAt < 2000)
+    if (!video) {
+      showScanResult(
+        "بدأ القارئ، لكن عنصر الفيديو غير موجود. افحص Console.",
 
-            ) {
-
-               return;
-
-            }
-
-            processingScan = true;
-
-            lastScannedToken = decodedText;
-
-            lastScannedAt = now;
-
-            try {
-
-               const selectedCourseCode = getSelectedCourseCode();
-
-               if (!selectedCourseCode) return;
-
-               const data = await api("/api/attendance/scan", {
-
-                  method: "POST",
-
-                  headers: {
-
-                     "Content-Type": "application/json",
-
-                     "X-Requested-With": "AttendanceApp",
-
-                  },
-
-                  body: JSON.stringify({
-
-                     token: decodedText,
-
-                     courseCode: selectedCourseCode,
-
-                  }),
-
-               });
-
-               showScanResult(`✅ ${data.message}\nالأسبوع: ${data.week}`);
-
-            } catch (error) {
-
-               showScanResult(`⚠️ ${error.message}`, false);
-
-            } finally {
-
-               setTimeout(() => {
-
-                  processingScan = false;
-
-               }, 1000);
-
-            }
-
-         },
-
+        false,
       );
+    } else {
+      showScanResult(
+        `الكاميرا بدأت. دقة الفيديو: ${video.videoWidth} × ${video.videoHeight}`,
+      );
+    }
+  } catch (error) {
+    console.error("Scanner startup error:", error);
 
-      scanning = true;
+    showScanResult(`تعذر تشغيل الكاميرا: ${error.message || error}`, false);
+  } finally {
+    starting = false;
 
-      // فحص هل المتصفح يعرض إطارات فيديو فعلية.
-
-      const video = document.querySelector("#reader video");
-
-      if (!video) {
-
-         showScanResult(
-
-            "بدأ القارئ، لكن عنصر الفيديو غير موجود. افحص Console.",
-
-            false,
-
-         );
-
-      } else {
-
-         showScanResult(
-
-            `الكاميرا بدأت. دقة الفيديو: ${video.videoWidth} × ${video.videoHeight}`,
-
-         );
-
-      }
-
-   } catch (error) {
-
-      console.error("Scanner startup error:", error);
-
-      showScanResult(`تعذر تشغيل الكاميرا: ${error.message || error}`, false);
-
-   } finally {
-
-      starting = false;
-
-      startScannerBtn.disabled = false;
-
-   }
-
+    startScannerBtn.disabled = false;
+  }
 }
 
 async function stopScanner() {
+  if (!qrScanner || !scanning) return;
 
-   if (!qrScanner || !scanning) return;
+  try {
+    await qrScanner.stop();
 
-   try {
+    scanning = false;
 
-      await qrScanner.stop();
+    showScanResult("تم إيقاف الكاميرا.");
+  } catch (error) {
+    console.error("Scanner stop error:", error);
 
-      scanning = false;
-
-      showScanResult("تم إيقاف الكاميرا.");
-
-   } catch (error) {
-
-      console.error("Scanner stop error:", error);
-
-      showScanResult("تعذر إيقاف الكاميرا.", false);
-
-   }
-
+    showScanResult("تعذر إيقاف الكاميرا.", false);
+  }
 }
 
 startScannerBtn.addEventListener("click", startScanner);
@@ -265,91 +239,65 @@ startScannerBtn.addEventListener("click", startScanner);
 stopScannerBtn.addEventListener("click", stopScanner);
 
 cameraSelect.addEventListener("change", async () => {
+  if (!scanning || !qrScanner) return;
 
-   if (!scanning || !qrScanner) return;
+  try {
+    await qrScanner.stop();
 
-   try {
+    scanning = false;
 
-      await qrScanner.stop();
+    showScanResult("جارٍ تغيير الكاميرا...");
 
-      scanning = false;
+    await qrScanner.start(
+      { deviceId: { exact: cameraSelect.value } },
 
-      showScanResult("جارٍ تغيير الكاميرا...");
+      {
+        fps: 10,
 
-      await qrScanner.start(
+        qrbox: (width, height) => {
+          const size = Math.floor(Math.min(width, height) * 0.7);
 
-         { deviceId: { exact: cameraSelect.value } },
+          return { width: size, height: size };
+        },
+      },
 
-         {
+      async (decodedText) => {
+        if (processingScan) return;
 
-            fps: 10,
+        processingScan = true;
 
-            qrbox: (width, height) => {
+        try {
+          const data = await api("/api/attendance/scan", {
+            method: "POST",
 
-               const size = Math.floor(Math.min(width, height) * 0.7);
+            headers: {
+              "Content-Type": "application/json",
 
-               return { width: size, height: size };
-
+              "X-Requested-With": "AttendanceApp",
             },
 
-         },
+            body: JSON.stringify({ token: decodedText }),
+          });
 
-         async (decodedText) => {
+          showScanResult(`✅ ${data.message}\nالأسبوع: ${data.week}`);
+        } catch (error) {
+          showScanResult(`⚠️ ${error.message}`, false);
+        } finally {
+          setTimeout(() => {
+            processingScan = false;
+          }, 1000);
+        }
+      },
+    );
 
-            if (processingScan) return;
+    scanning = true;
 
-            processingScan = true;
+    showScanResult("تم تشغيل الكاميرا المختارة.");
+  } catch (error) {
+    scanning = false;
 
-            try {
+    console.error("Camera switch error:", error);
 
-               const data = await api("/api/attendance/scan", {
-
-                  method: "POST",
-
-                  headers: {
-
-                     "Content-Type": "application/json",
-
-                     "X-Requested-With": "AttendanceApp",
-
-                  },
-
-                  body: JSON.stringify({ token: decodedText }),
-
-               });
-
-               showScanResult(`✅ ${data.message}\nالأسبوع: ${data.week}`);
-
-            } catch (error) {
-
-               showScanResult(`⚠️ ${error.message}`, false);
-
-            } finally {
-
-               setTimeout(() => {
-
-                  processingScan = false;
-
-               }, 1000);
-
-            }
-
-         },
-
-      );
-
-      scanning = true;
-
-      showScanResult("تم تشغيل الكاميرا المختارة.");
-
-   } catch (error) {
-
-      scanning = false;
-
-      console.error("Camera switch error:", error);
-
-      showScanResult("تعذر تغيير الكاميرا.", false);
-
-   }
-
+    showScanResult("تعذر تغيير الكاميرا.", false);
+  }
 });

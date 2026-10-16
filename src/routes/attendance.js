@@ -13,7 +13,6 @@ function requireAdmin(req, res, next) {
 }
 
 // الحصول على إعدادات الترم الحالي أو إنشاؤها
-
 async function getSettings(courseCode) {
   if (typeof courseCode !== "string" || !courseCode.trim()) {
     throw new Error("Course code is required");
@@ -38,7 +37,6 @@ async function getSettings(courseCode) {
 }
 
 // تسجيل الحضور باستخدام QR
-
 router.post("/scan", requireAdmin, async (req, res) => {
   try {
     const { token, courseCode } = req.body || {};
@@ -341,6 +339,62 @@ router.get("/export", requireAdmin, async (req, res) => {
     console.error("Export error:", error.message);
     res.status(500).json({
       error: "تعذر تصدير ملف Excel",
+    });
+  }
+});
+
+// GET /api/attendance/courses
+router.get("/courses", async (req, res) => {
+  try {
+    const courses = await Settings.find().lean();
+
+    res.json({
+      success: true,
+      courses,
+    });
+  } catch (error) {
+    console.error("Error fetching courses:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "حدث خطأ أثناء جلب المواد",
+    });
+  }
+});
+
+router.get("/course-status", async (req, res) => {
+  try {
+    const courseCode = String(req.query.courseCode || "").trim();
+
+    if (!courseCode) {
+      return res.status(400).json({
+        error: "كود المادة مطلوب",
+      });
+    }
+
+    const settings = await Settings.findOne({ courseCode }).lean();
+
+    if (!settings) {
+      return res.status(404).json({
+        error: "إعدادات المادة غير موجودة",
+      });
+    }
+
+    const currentWeek = settings.currentWeek;
+    const isClosed = (settings.closedWeeks || []).includes(currentWeek);
+
+    res.json({
+      success: true,
+      courseCode: settings.courseCode,
+      courseName: settings.courseName,
+      currentWeek,
+      isClosed,
+    });
+  } catch (error) {
+    console.error("Course status error:", error);
+
+    res.status(500).json({
+      error: "تعذر تحميل حالة الحضور",
     });
   }
 });

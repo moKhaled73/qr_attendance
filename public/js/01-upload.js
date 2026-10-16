@@ -13,97 +13,79 @@ const removeSelectedFile = document.getElementById("removeSelectedFile");
 const importButton = document.getElementById("importBtn");
 
 function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} بايت`;
 
-   if (bytes < 1024) return `${bytes} بايت`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 
-   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-
-   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 function updateSelectedFile() {
+  const file = studentsFileInput.files?.[0];
 
-   const file = studentsFileInput.files?.[0];
+  if (!file) {
+    selectedFileInfo.classList.add("hidden");
 
-   if (!file) {
+    selectedFileName.textContent = "";
 
-      selectedFileInfo.classList.add("hidden");
+    selectedFileSize.textContent = "";
 
-      selectedFileName.textContent = "";
+    importButton.disabled = true;
 
-      selectedFileSize.textContent = "";
+    return;
+  }
 
-      importButton.disabled = true;
+  selectedFileName.textContent = file.name;
 
-      return;
+  selectedFileSize.textContent = formatFileSize(file.size);
 
-   }
-
-   selectedFileName.textContent = file.name;
-
-   selectedFileSize.textContent = formatFileSize(file.size);
-
-   selectedFileInfo.classList.remove("hidden");
+  selectedFileInfo.classList.remove("hidden");
 
   const isXlsx = /\.xlsx$/i.test(file.name);
 
-   const withinLimit = file.size <= 5 * 1024 * 1024;
+  const withinLimit = file.size <= 5 * 1024 * 1024;
 
-   importButton.disabled = !isXlsx || !withinLimit;
+  importButton.disabled = !isXlsx || !withinLimit;
 
-   if (!isXlsx) {
-
-      showMessage("من فضلك اختر ملف Excel بامتداد .xlsx", true);
-
-   } else if (!withinLimit) {
-
-      showMessage("حجم الملف أكبر من الحد المسموح (5 MB).", true);
-
-   }
-
+  if (!isXlsx) {
+    showMessage("من فضلك اختر ملف Excel بامتداد .xlsx", true);
+  } else if (!withinLimit) {
+    showMessage("حجم الملف أكبر من الحد المسموح (5 MB).", true);
+  }
 }
 
 studentsFileInput.addEventListener("change", updateSelectedFile);
 
 removeSelectedFile.addEventListener("click", () => {
+  studentsFileInput.value = "";
 
-   studentsFileInput.value = "";
-
-   updateSelectedFile();
-
+  updateSelectedFile();
 });
 
 uploadDropzone.addEventListener("dragover", (event) => {
+  event.preventDefault();
 
-   event.preventDefault();
-
-   uploadDropzone.classList.add("drag-over");
-
+  uploadDropzone.classList.add("drag-over");
 });
 
 uploadDropzone.addEventListener("dragleave", () => {
-
-   uploadDropzone.classList.remove("drag-over");
-
+  uploadDropzone.classList.remove("drag-over");
 });
 
 uploadDropzone.addEventListener("drop", (event) => {
+  event.preventDefault();
 
-   event.preventDefault();
+  uploadDropzone.classList.remove("drag-over");
 
-   uploadDropzone.classList.remove("drag-over");
+  const file = event.dataTransfer.files?.[0];
 
-   const file = event.dataTransfer.files?.[0];
+  if (!file) return;
 
-   if (!file) return;
+  const transfer = new DataTransfer();
 
-   const transfer = new DataTransfer();
+  transfer.items.add(file);
 
-   transfer.items.add(file);
+  studentsFileInput.files = transfer.files;
 
-   studentsFileInput.files = transfer.files;
-
-   updateSelectedFile();
-
+  updateSelectedFile();
 });

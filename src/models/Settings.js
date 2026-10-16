@@ -9,6 +9,13 @@ const settingsSchema = new mongoose.Schema({
     maxlength: 30,
   },
 
+  courseName: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 150,
+  },
+
   semesterName: {
     type: String,
     default: "الترم الحالي",

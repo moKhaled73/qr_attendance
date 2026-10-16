@@ -60,8 +60,10 @@
               QR الطلاب
             </button>
 
-            <button type="button" class="tab-button" data-tab="weekTab">
-              أسبوع الحضور
+            <button class="tab-button" data-tab="weekTab">أسبوع الحضور</button>
+
+            <button class="tab-button" data-tab="scanTab">
+              مسح QR وتسجيل الحضور
             </button>
 
             <button type="button" class="tab-button" data-tab="exportTab">
@@ -157,14 +159,10 @@
               المادة وصورة QR الخاصة به.
             </p>
 
-            <label for="qrCourseCode">كود المادة</label>
-            <input
-              type="text"
-              id="qrCourseCode"
-              placeholder="مثال: CS101"
-              maxlength="30"
-              required
-            />
+            <label for="qrCourseCode">اختيار المادة</label>
+            <select id="qrCourseCode" class="select" required>
+              <option value="">جاري تحميل المواد...</option>
+            </select>
 
             <button id="exportQrBtn">تنزيل ملف QR للطلاب</button>
           </div>
@@ -174,15 +172,10 @@
         <div id="weekTab" class="tab-content hidden">
           <div class="card">
             <h2>أسبوع الحضور</h2>
-
-            <label for="courseCode">كود المادة</label>
-            <input
-              id="courseCode"
-              type="text"
-              placeholder="مثال: CS101"
-              maxlength="30"
-              required
-            />
+            <label for="courseCode">اختيار المادة</label>
+            <select id="courseCode" class="select" required>
+              <option value="">جاري تحميل المواد...</option>
+            </select>
 
             <label for="week">الأسبوع الحالي</label>
             <input id="week" type="number" min="1" max="30" value="1" />
@@ -193,9 +186,26 @@
               إغلاق الأسبوع وتسجيل الغياب
             </button>
           </div>
+        </div>
 
+        <!-- Tab مسح QR وتسجيل الحضور -->
+        <div id="scanTab" class="tab-content hidden">
           <div class="card">
             <h2>مسح QR وتسجيل الحضور</h2>
+
+            <label for="scanCourseCode">اختيار المادة</label>
+            <select id="scanCourseCode" class="select" required>
+              <option value="">جاري تحميل المواد...</option>
+            </select>
+
+            <div
+              id="courseAttendanceStatus"
+              class="card"
+              style="margin-top: 12px"
+            >
+              <p id="currentWeekStatus">اختر المادة لعرض حالة الحضور.</p>
+              <p id="registrationStatus"></p>
+            </div>
 
             <label for="cameraSelect">اختيار الكاميرا</label>
             <select id="cameraSelect">
@@ -222,14 +232,10 @@
             <h2>كشف الحضور</h2>
             <p class="muted">تنزيل كشف الترم للمادة المحددة بصيغة Excel.</p>
 
-            <label for="exportCourseCode">كود المادة</label>
-            <input
-              id="exportCourseCode"
-              type="text"
-              placeholder="مثال: CS101"
-              maxlength="30"
-              required
-            />
+            <label for="exportCourseCode">اختيار المادة</label>
+            <select id="exportCourseCode" class="select" required>
+              <option value="">جاري تحميل المواد...</option>
+            </select>
 
             <button id="exportBtn" type="button">تصدير Excel</button>
           </div>

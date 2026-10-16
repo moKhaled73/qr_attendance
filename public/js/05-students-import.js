@@ -1,43 +1,30 @@
 // import students
 
 document.getElementById("importBtn").addEventListener("click", async () => {
+  const file = document.getElementById("studentsFile").files[0];
 
-   const file = document.getElementById("studentsFile").files[0];
+  if (!file) {
+    return showMessage("اختر ملف Excel أولًا", true);
+  }
 
-   if (!file) {
+  const formData = new FormData();
 
-      return showMessage("اختر ملف Excel أولًا", true);
+  formData.append("file", file);
 
-   }
+  try {
+    const data = await api("/api/students/import", {
+      method: "POST",
 
-   const formData = new FormData();
+      headers: { "X-Requested-With": "AttendanceApp" },
 
-   formData.append("file", file);
+      body: formData,
+    });
 
-   try {
-
-      const data = await api("/api/students/import", {
-
-         method: "POST",
-
-         headers: { "X-Requested-With": "AttendanceApp" },
-
-         body: formData,
-
-      });
-
-      showMessage(
-
-         `تم الاستيراد.\nإجمالي الطلاب: ${data.total}\n` +
-
-            `طلاب جدد: ${data.inserted}\nتم تحديث بيانات: ${data.updated}`,
-
-      );
-
-   } catch (error) {
-
-      showMessage(error.message, true);
-
-   }
-
+    showMessage(
+      `تم الاستيراد.\nإجمالي الطلاب: ${data.total}\n` +
+        `طلاب جدد: ${data.inserted}\nتم تحديث بيانات: ${data.updated}`,
+    );
+  } catch (error) {
+    showMessage(error.message, true);
+  }
 });

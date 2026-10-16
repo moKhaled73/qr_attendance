@@ -1,125 +1,80 @@
 // تحديد الأسبوع الحالي لمادة معينة
 
 document.getElementById("setWeekBtn").addEventListener("click", async () => {
+  const courseCode = document.getElementById("courseCode").value.trim();
+  const week = Number(document.getElementById("week").value);
 
-   const courseCode = document.getElementById("courseCode").value.trim();
+  if (!courseCode) {
+    showMessage("من فضلك أدخل كود المادة.", true);
+    document.getElementById("courseCode").focus();
+    return;
+  }
 
-   const week = Number(document.getElementById("week").value);
+  try {
+    const data = await api("/api/attendance/set-week", {
+      method: "POST",
 
-   if (!courseCode) {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "AttendanceApp",
+      },
 
-      showMessage("من فضلك أدخل كود المادة.", true);
+      body: JSON.stringify({
+        courseCode,
+        week,
+      }),
+    });
 
-      document.getElementById("courseCode").focus();
-
-      return;
-
-   }
-
-   try {
-
-      const data = await api("/api/attendance/set-week", {
-
-         method: "POST",
-
-         headers: {
-
-            "Content-Type": "application/json",
-
-            "X-Requested-With": "AttendanceApp",
-
-         },
-
-         body: JSON.stringify({
-
-            courseCode,
-
-            week,
-
-         }),
-
-      });
-
-      showMessage(
-
-         `تم تحديد الأسبوع ${data.currentWeek} للمادة ${data.courseCode}`,
-
-      );
-
-   } catch (error) {
-
-      showMessage(error.message, true);
-
-   }
-
+    showMessage(
+      `تم تحديد الأسبوع ${data.currentWeek} للمادة ${data.courseCode}`,
+    );
+  } catch (error) {
+    showMessage(error.message, true);
+  }
 });
 
 // إغلاق أسبوع المادة وتسجيل الغياب
 
 document.getElementById("closeWeekBtn").addEventListener("click", async () => {
+  const courseCode = document.getElementById("courseCode").value.trim();
 
-   const courseCode = document.getElementById("courseCode").value.trim();
+  if (!courseCode) {
+    showMessage("من فضلك أدخل كود المادة.", true);
 
-   if (!courseCode) {
+    document.getElementById("courseCode").focus();
 
-      showMessage("من فضلك أدخل كود المادة.", true);
+    return;
+  }
 
-      document.getElementById("courseCode").focus();
+  if (
+    !confirm(
+      `هل أنت متأكد من إغلاق الأسبوع الحالي للمادة ${courseCode}؟\n` +
+        "سيتم تسجيل غائب لكل طالب لم يسجل حضوره في هذا الأسبوع.",
+    )
+  ) {
+    return;
+  }
 
-      return;
+  try {
+    const data = await api("/api/attendance/close-week", {
+      method: "POST",
 
-   }
+      headers: {
+        "Content-Type": "application/json",
 
-   if (
+        "X-Requested-With": "AttendanceApp",
+      },
 
-      !confirm(
+      body: JSON.stringify({
+        courseCode,
+      }),
+    });
 
-         `هل أنت متأكد من إغلاق الأسبوع الحالي للمادة ${courseCode}؟\n` +
-
-            "سيتم تسجيل غائب لكل طالب لم يسجل حضوره في هذا الأسبوع.",
-
-      )
-
-   ) {
-
-      return;
-
-   }
-
-   try {
-
-      const data = await api("/api/attendance/close-week", {
-
-         method: "POST",
-
-         headers: {
-
-            "Content-Type": "application/json",
-
-            "X-Requested-With": "AttendanceApp",
-
-         },
-
-         body: JSON.stringify({
-
-            courseCode,
-
-         }),
-
-      });
-
-      showMessage(
-
-         `تم إغلاق الأسبوع ${data.week} للمادة ${data.courseCode}.\n` +
-
-            `عدد حالات الغياب المسجلة: ${data.absentCount}`,
-
-      );
-
-   } catch (error) {
-
-      showMessage(error.message, true);
-
-   }
-
+    showMessage(
+      `تم إغلاق الأسبوع ${data.week} للمادة ${data.courseCode}.\n` +
+        `عدد حالات الغياب المسجلة: ${data.absentCount}`,
+    );
+  } catch (error) {
+    showMessage(error.message, true);
+  }
 });
