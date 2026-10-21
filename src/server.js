@@ -1,7 +1,5 @@
 require("dotenv").config();
 
-const https = require("https");
-const fs = require("fs");
 const express = require("express");
 const mongoose = require("mongoose");
 const helmet = require("helmet");
@@ -11,10 +9,12 @@ const path = require("path");
 
 const app = express();
 
-const tlsOptions = {
-  cert: fs.readFileSync(path.join(__dirname, "../certs/192.168.1.8+2.pem")),
-  key: fs.readFileSync(path.join(__dirname, "../certs/192.168.1.8+2-key.pem")),
-};
+// const tlsOptions = {
+//   cert: fs.readFileSync(path.join(__dirname, "../certs/10.109.166.11+2.pem")),
+//   key: fs.readFileSync(
+//     path.join(__dirname, "../certs/10.109.166.11+2-key.pem"),
+//   ),
+// };
 
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
   throw new Error("Configure a strong SESSION_SECRET");
@@ -61,11 +61,14 @@ app.use("/api/attendance", require("./routes/attendance.js"));
 async function start() {
   await mongoose.connect(process.env.MONGODB_URI);
 
-  https
-    .createServer(tlsOptions, app)
-    .listen(Number(process.env.PORT) || 3000, "0.0.0.0", () => {
-      console.log("HTTPS server running on port 3000");
-    });
+  // https
+  //   .createServer(tlsOptions, app)
+  //   .listen(Number(process.env.PORT) || 3000, "0.0.0.0", () => {
+  //     console.log("HTTPS server running on port 3000");
+  //   });
+  app.listen(Number(process.env.PORT) || 3000, "0.0.0.0", () => {
+    console.log("server running on port 3000");
+  });
 }
 
 start().catch((error) => {
