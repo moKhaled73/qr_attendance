@@ -65,10 +65,10 @@ async function createStudentQrImage(student) {
 
     <text x="500" y="200"
           text-anchor="middle"
-          font-family="Noto Sans Arabic"
+          font-family="Arial"
           font-size="42"
           fill="black"
-          direction="rtl">${courseCode}: ${courseName}</text>
+          direction="ltr">${courseCode}: ${courseName}</text>
   </svg>
 `);
 
