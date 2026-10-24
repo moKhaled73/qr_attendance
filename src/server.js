@@ -17,6 +17,15 @@ process.env.FONTCONFIG_FILE = path.join(
   "fonts.conf",
 );
 
+console.log(
+  "Font file exists:",
+  require("fs").existsSync(
+    require("path").join(process.cwd(), "assets", "NotoSansArabic-Regular.ttf"),
+  ),
+);
+
+console.log("Fontconfig path:", process.env.FONTCONFIG_PATH);
+
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
   throw new Error("Configure a strong SESSION_SECRET");
 }
