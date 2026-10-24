@@ -57,6 +57,7 @@ async function createStudentQrImage(student) {
 
     <text x="500" y="100"
           text-anchor="middle"
+          font-family="Noto Naskh Arabic"
           font-size="48"
           font-weight="bold"
           fill="black"
@@ -64,6 +65,7 @@ async function createStudentQrImage(student) {
 
     <text x="500" y="200"
           text-anchor="middle"
+          font-family="Noto Naskh Arabic"
           font-size="42"
           fill="black"
           direction="ltr">${courseCode}: ${courseName}</text>

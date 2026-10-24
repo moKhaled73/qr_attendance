@@ -17,40 +17,6 @@ process.env.FONTCONFIG_FILE = path.join(
   "fonts.conf",
 );
 
-const sharp = require("sharp");
-
-app.get("/debug/font-test", async (req, res) => {
-  try {
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg"
-           width="800" height="250">
-        <rect width="100%" height="100%" fill="white"/>
-
-        <text x="20" y="80"
-              font-family="Noto Sans Arabic"
-              font-size="40" fill="black">
-          Hello Student 123
-        </text>
-
-        <text x="20" y="170"
-              font-family="Noto Sans Arabic"
-              font-size="40" fill="black">
-          اسم الطالب محمد
-        </text>
-      </svg>
-    `;
-
-    const image = await sharp(Buffer.from(svg)).png().toBuffer();
-
-    res.set("Content-Type", "image/png");
-    res.set("Cache-Control", "no-store");
-    res.send(image);
-  } catch (err) {
-    console.error("Font test failed:", err);
-    res.status(500).send("Font test failed");
-  }
-});
-
 if (!process.env.MONGODB_URI) {
   throw new Error("Configure MONGODB_URI");
 }
