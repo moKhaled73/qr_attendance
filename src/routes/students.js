@@ -25,6 +25,9 @@ function requireAdmin(req, res, next) {
 }
 
 async function createStudentQrImage(student) {
+  const path = require("path");
+  const fs = require("fs");
+
   const qrPayload = JSON.stringify({
     studentCode: student.studentCode,
     courseCode: student.courseCode,
@@ -46,27 +49,48 @@ async function createStudentQrImage(student) {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&apos;");
 
-  const name = escapeXml(student.fullName);
-  const courseCode = escapeXml(student.courseCode);
-  const courseName = escapeXml(student.courseName);
+  const name = escapeXml(student.fullName || "");
+  const courseCode = escapeXml(student.courseCode || "");
+  const courseName = escapeXml(student.courseName || "");
+
+  const fontPath = path.join(
+    process.cwd(),
+    "assets",
+    "NotoSansArabic-Regular.ttf",
+  );
+
+  if (!fs.existsSync(fontPath)) {
+    throw new Error(`Font file not found: ${fontPath}`);
+  }
+
+  const fontData = fs.readFileSync(fontPath).toString("base64");
 
   const textSvg = Buffer.from(`
-    <svg width="360" height="100"
+    <svg width="1000" height="300"
           xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="white"/>
+      <defs>
+        <style>
+          @font-face {
+            font-family: 'NotoArabic';
+            src: url('data:font/ttf;base64,${fontData}') format('truetype');
+          }
+          text {
+            font-family: 'NotoArabic';
+            fill: #000000;
+          }
+        </style>
+      </defs>
 
-      <text x="180" y="35"
-            text-anchor="middle"
-            font-family="Arial"
-            font-size="19"
-            font-weight="bold"
-            fill="black">${name}</text>
+      <rect width="100%" height="100%" fill="#ffffff"/>
 
-      <text x="180" y="72"
+      <text x="500" y="100"
             text-anchor="middle"
-            font-family="Arial"
-            font-size="17"
-            fill="black">${courseCode}: ${courseName}</text>
+            font-size="48"
+            font-weight="bold">${name}</text>
+
+      <text x="500" y="200"
+            text-anchor="middle"
+            font-size="42">${courseCode}: ${courseName}</text>
     </svg>
   `);
 
@@ -85,9 +109,9 @@ async function createStudentQrImage(student) {
         top: 50,
       },
       {
-        input: await sharp(textSvg).resize(1000, 300).png().toBuffer(),
+        input: await sharp(textSvg).png().toBuffer(),
         left: 0,
-        top: 950,
+        top: 900,
       },
     ])
     .png()
