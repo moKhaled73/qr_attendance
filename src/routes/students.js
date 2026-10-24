@@ -70,7 +70,7 @@ async function createStudentQrImage(student) {
   ctx.font = 'bold 48px "NotoNaskhArabic"';
   ctx.direction = "rtl";
   ctx.fillText(
-    `${student.studentCode || ""}: ${student.studentName || ""}`,
+    `${student.studentCode || ""}: ${student.fullName || ""}`,
     500,
     1000,
     960,
