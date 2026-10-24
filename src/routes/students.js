@@ -68,9 +68,9 @@ async function createStudentQrImage(student) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = 'bold 48px "NotoNaskhArabic"';
-  ctx.direction = "rtl";
+  ctx.direction = "ltr";
   ctx.fillText(
-    `${student.studentCode || ""}: ${student.fullName || ""}`,
+    `${student.studentCode || ""} ${student.fullName || ""}`,
     500,
     1000,
     960,
