@@ -74,7 +74,7 @@ async function createStudentQrImage(student) {
   ctx.fillText(student.fullName || "", 500, 1000, 960);
 
   // كود المادة واسمها
-  ctx.font = '42px "NotoNaskhArabic"';
+  ctx.font = '42px "Arial"';
   ctx.direction = "ltr";
   ctx.fillText(
     `${student.courseCode || ""}: ${student.courseName || ""}`,
