@@ -13,17 +13,15 @@ const { createCanvas, GlobalFonts } = require("@napi-rs/canvas");
 const path = require("path");
 const fs = require("fs");
 
-const fontPath = path.join(
-  process.cwd(),
-  "assets",
-  "NotoNaskhArabic-Regular.ttf",
+GlobalFonts.registerFromPath(
+  path.join(process.cwd(), "assets", "NotoNaskhArabic-Regular.ttf"),
+  "NotoNaskhArabic",
 );
 
-if (!fs.existsSync(fontPath)) {
-  throw new Error(`Font file not found: ${fontPath}`);
-}
-
-GlobalFonts.registerFromPath(fontPath, "NotoNaskhArabic");
+GlobalFonts.registerFromPath(
+  path.join(process.cwd(), "assets", "DejaVuSans.ttf"),
+  "DejaVuSans",
+);
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -71,10 +69,15 @@ async function createStudentQrImage(student) {
   ctx.textBaseline = "middle";
   ctx.font = 'bold 48px "NotoNaskhArabic"';
   ctx.direction = "rtl";
-  ctx.fillText(student.fullName || "", 500, 1000, 960);
+  ctx.fillText(
+    `${student.studentCode || ""}: ${student.studentName || ""}`,
+    500,
+    1000,
+    960,
+  );
 
   // كود المادة واسمها
-  ctx.font = '42px "Arial"';
+  ctx.font = '42px "DejaVuSans"';
   ctx.direction = "ltr";
   ctx.fillText(
     `${student.courseCode || ""}: ${student.courseName || ""}`,
