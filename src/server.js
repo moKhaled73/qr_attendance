@@ -5,29 +5,17 @@ const mongoose = require("mongoose");
 const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 const path = require("path");
-const fs = require("fs");
 
 const app = express();
 
-const fontConfigDir = path.join(process.cwd(), "assets", "fonts");
+process.env.FONTCONFIG_PATH = path.join(process.cwd(), "assets", "fonts");
 
-const fontConfigFile = path.join(fontConfigDir, "fonts.conf");
-const fontDirectory = path.join(process.cwd(), "assets");
-
-fs.mkdirSync(fontConfigDir, { recursive: true });
-
-fs.writeFileSync(
-  fontConfigFile,
-  `<?xml version="1.0"?>
-<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
-<fontconfig>
-  <dir>${fontDirectory}</dir>
-  <cachedir>/tmp/fontconfig-cache</cachedir>
-</fontconfig>`,
+process.env.FONTCONFIG_FILE = path.join(
+  process.cwd(),
+  "assets",
+  "fonts",
+  "fonts.conf",
 );
-
-process.env.FONTCONFIG_PATH = fontConfigDir;
-process.env.FONTCONFIG_FILE = fontConfigFile;
 
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
   throw new Error("Configure a strong SESSION_SECRET");
