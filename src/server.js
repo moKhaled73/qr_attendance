@@ -17,6 +17,45 @@ process.env.FONTCONFIG_FILE = path.join(
   "fonts.conf",
 );
 
+const sharp = require("sharp");
+
+async function testFontRendering() {
+  const fs = require("fs");
+  const path = require("path");
+
+  const fontPath = path.join(
+    process.cwd(),
+    "assets",
+    "NotoSansArabic-Regular.ttf",
+  );
+
+  const fontExists = fs.existsSync(fontPath);
+  console.log("TEST: font exists =", fontExists);
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg"
+         width="800" height="250">
+      <rect width="100%" height="100%" fill="white"/>
+      <text x="20" y="80"
+            font-family="Noto Sans Arabic"
+            font-size="40" fill="black">Hello Student 123</text>
+      <text x="20" y="170"
+            font-family="Noto Sans Arabic"
+            font-size="40" fill="black">اسم الطالب محمد</text>
+    </svg>
+  `;
+
+  const output = await sharp(Buffer.from(svg)).png().toBuffer();
+
+  console.log("TEST: SVG rendered, bytes =", output.length);
+
+  return output;
+}
+
+testFontRendering()
+  .then(() => console.log("TEST: rendering completed"))
+  .catch((err) => console.error("TEST: rendering failed", err));
+
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
   throw new Error("Configure a strong SESSION_SECRET");
 }
