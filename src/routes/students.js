@@ -25,9 +25,6 @@ function requireAdmin(req, res, next) {
 }
 
 async function createStudentQrImage(student) {
-  const path = require("path");
-  const fs = require("fs");
-
   const qrPayload = JSON.stringify({
     studentCode: student.studentCode,
     courseCode: student.courseCode,
@@ -53,46 +50,27 @@ async function createStudentQrImage(student) {
   const courseCode = escapeXml(student.courseCode || "");
   const courseName = escapeXml(student.courseName || "");
 
-  const fontPath = path.join(
-    process.cwd(),
-    "assets",
-    "NotoSansArabic-Regular.ttf",
-  );
-
-  if (!fs.existsSync(fontPath)) {
-    throw new Error(`Font file not found: ${fontPath}`);
-  }
-
-  const fontData = fs.readFileSync(fontPath).toString("base64");
-
   const textSvg = Buffer.from(`
-    <svg width="1000" height="300"
-          xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <style>
-          @font-face {
-            font-family: 'NotoArabic';
-            src: url('data:font/ttf;base64,${fontData}') format('truetype');
-          }
-          text {
-            font-family: 'NotoArabic';
-            fill: #000000;
-          }
-        </style>
-      </defs>
+  <svg width="1000" height="300"
+        xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="white"/>
 
-      <rect width="100%" height="100%" fill="#ffffff"/>
+    <text x="500" y="100"
+          text-anchor="middle"
+          font-family="Noto Sans Arabic"
+          font-size="48"
+          font-weight="bold"
+          fill="black"
+          direction="rtl">${name}</text>
 
-      <text x="500" y="100"
-            text-anchor="middle"
-            font-size="48"
-            font-weight="bold">${name}</text>
-
-      <text x="500" y="200"
-            text-anchor="middle"
-            font-size="42">${courseCode}: ${courseName}</text>
-    </svg>
-  `);
+    <text x="500" y="200"
+          text-anchor="middle"
+          font-family="Noto Sans Arabic"
+          font-size="42"
+          fill="black"
+          direction="rtl">${courseCode}: ${courseName}</text>
+  </svg>
+`);
 
   return sharp({
     create: {
