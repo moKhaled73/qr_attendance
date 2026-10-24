@@ -9,6 +9,22 @@ const JSZip = require("jszip");
 const Student = require("../models/Student.js");
 const Settings = require("../models/Settings");
 
+const { createCanvas, GlobalFonts } = require("@napi-rs/canvas");
+const path = require("path");
+const fs = require("fs");
+
+const fontPath = path.join(
+  process.cwd(),
+  "assets",
+  "NotoNaskhArabic-Regular.ttf",
+);
+
+if (!fs.existsSync(fontPath)) {
+  throw new Error(`Font file not found: ${fontPath}`);
+}
+
+GlobalFonts.registerFromPath(fontPath, "NotoNaskhArabic");
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
@@ -38,62 +54,36 @@ async function createStudentQrImage(student) {
     errorCorrectionLevel: "H",
   });
 
-  const escapeXml = (value = "") =>
-    String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&apos;");
+  const canvas = createCanvas(1000, 1200);
+  const ctx = canvas.getContext("2d");
 
-  const name = escapeXml(student.fullName || "");
-  const courseCode = escapeXml(student.courseCode || "");
-  const courseName = escapeXml(student.courseName || "");
+  // خلفية بيضاء
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, 1000, 1200);
 
-  const textSvg = Buffer.from(`
-  <svg width="1000" height="300"
-        xmlns="http://www.w3.org/2000/svg">
-    <rect width="100%" height="100%" fill="white"/>
+  // وضع QR في المنتصف
+  const qrImage = await require("@napi-rs/canvas").loadImage(qrBuffer);
+  ctx.drawImage(qrImage, 50, 50, 900, 900);
 
-    <text x="500" y="100"
-          text-anchor="middle"
-          font-family="Noto Naskh Arabic"
-          font-size="48"
-          font-weight="bold"
-          fill="black"
-          direction="rtl">${name}</text>
+  // اسم الطالب
+  ctx.fillStyle = "#000000";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = 'bold 48px "NotoNaskhArabic"';
+  ctx.direction = "rtl";
+  ctx.fillText(student.fullName || "", 500, 1000, 960);
 
-    <text x="500" y="200"
-          text-anchor="middle"
-          font-family="Noto Naskh Arabic"
-          font-size="42"
-          fill="black"
-          direction="ltr">${courseCode}: ${courseName}</text>
-  </svg>
-`);
+  // كود المادة واسمها
+  ctx.font = '42px "NotoNaskhArabic"';
+  ctx.direction = "ltr";
+  ctx.fillText(
+    `${student.courseCode || ""}: ${student.courseName || ""}`,
+    500,
+    1100,
+    960,
+  );
 
-  return sharp({
-    create: {
-      width: 1000,
-      height: 1200,
-      channels: 4,
-      background: "#ffffff",
-    },
-  })
-    .composite([
-      {
-        input: await sharp(qrBuffer).resize(900, 900).png().toBuffer(),
-        left: 50,
-        top: 50,
-      },
-      {
-        input: await sharp(textSvg).png().toBuffer(),
-        left: 0,
-        top: 900,
-      },
-    ])
-    .png()
-    .toBuffer();
+  return canvas.toBuffer("image/png");
 }
 
 router.use(requireAdmin);
