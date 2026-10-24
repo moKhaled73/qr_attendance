@@ -12,7 +12,6 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// الحصول على إعدادات الترم الحالي أو إنشاؤها
 async function getSettings(courseCode) {
   if (typeof courseCode !== "string" || !courseCode.trim()) {
     throw new Error("Course code is required");
@@ -36,8 +35,9 @@ async function getSettings(courseCode) {
   return settings;
 }
 
-// تسجيل الحضور باستخدام QR
-router.post("/scan", requireAdmin, async (req, res) => {
+router.use(requireAdmin);
+
+router.post("/scan", async (req, res) => {
   try {
     const { token, courseCode } = req.body || {};
 
@@ -169,8 +169,7 @@ router.post("/scan", requireAdmin, async (req, res) => {
   }
 });
 
-// إغلاق أسبوع مادة وتسجيل الغياب
-router.post("/close-week", requireAdmin, async (req, res) => {
+router.post("/close-week", async (req, res) => {
   try {
     const { courseCode } = req.body || {};
 
@@ -229,8 +228,7 @@ router.post("/close-week", requireAdmin, async (req, res) => {
   }
 });
 
-// تحديد الأسبوع الحالي لمادة معينة
-router.post("/set-week", requireAdmin, async (req, res) => {
+router.post("/set-week", async (req, res) => {
   try {
     const { week, courseCode } = req.body || {};
 
@@ -273,8 +271,7 @@ router.post("/set-week", requireAdmin, async (req, res) => {
   }
 });
 
-// تصدير كشف الترم إلى Excel بناءً على كود المادة
-router.get("/export", requireAdmin, async (req, res) => {
+router.get("/export", async (req, res) => {
   try {
     const courseCode = String(req.query.courseCode || "").trim();
 
@@ -343,7 +340,6 @@ router.get("/export", requireAdmin, async (req, res) => {
   }
 });
 
-// GET /api/attendance/courses
 router.get("/courses", async (req, res) => {
   try {
     const courses = await Settings.find().lean();

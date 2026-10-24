@@ -3,6 +3,8 @@ const multer = require("multer");
 const ExcelJS = require("exceljs");
 const crypto = require("crypto");
 const QRCode = require("qrcode");
+const sharp = require("sharp");
+const JSZip = require("jszip");
 
 const Student = require("../models/Student.js");
 const Settings = require("../models/Settings");
@@ -20,6 +22,76 @@ function requireAdmin(req, res, next) {
   }
 
   next();
+}
+
+async function createStudentQrImage(student) {
+  const qrPayload = JSON.stringify({
+    studentCode: student.studentCode,
+    courseCode: student.courseCode,
+    qrToken: student.qrToken,
+  });
+
+  const qrBuffer = await QRCode.toBuffer(qrPayload, {
+    type: "png",
+    width: 900,
+    margin: 0.5,
+    errorCorrectionLevel: "H",
+  });
+
+  const escapeXml = (value = "") =>
+    String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+
+  const name = escapeXml(student.fullName);
+  const courseCode = escapeXml(student.courseCode);
+  const courseName = escapeXml(student.courseName);
+
+  const textSvg = Buffer.from(`
+    <svg width="360" height="100"
+          xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="white"/>
+
+      <text x="180" y="35"
+            text-anchor="middle"
+            font-family="Arial"
+            font-size="19"
+            font-weight="bold"
+            fill="black">${name}</text>
+
+      <text x="180" y="72"
+            text-anchor="middle"
+            font-family="Arial"
+            font-size="17"
+            fill="black">${courseCode}: ${courseName}</text>
+    </svg>
+  `);
+
+  return sharp({
+    create: {
+      width: 1000,
+      height: 1200,
+      channels: 4,
+      background: "#ffffff",
+    },
+  })
+    .composite([
+      {
+        input: await sharp(qrBuffer).resize(900, 900).png().toBuffer(),
+        left: 50,
+        top: 50,
+      },
+      {
+        input: await sharp(textSvg).resize(1000, 300).png().toBuffer(),
+        left: 0,
+        top: 950,
+      },
+    ])
+    .png()
+    .toBuffer();
 }
 
 router.use(requireAdmin);
@@ -133,7 +205,6 @@ router.post("/import", upload.single("file"), async (req, res) => {
 
     if (students.length > 0) {
       const { courseCode, courseName } = students[0];
-      console.log("hi");
 
       await Settings.findOneAndUpdate(
         { courseCode },
@@ -195,7 +266,79 @@ router.post("/import", upload.single("file"), async (req, res) => {
   }
 });
 
-// Return a printable QR image for a student to the admin.
+router.get("/export-qr-excel", async (req, res) => {
+  try {
+    const { courseCode } = req.query;
+
+    if (!courseCode || typeof courseCode !== "string" || !courseCode.trim()) {
+      return res.status(400).json({
+        error: "من فضلك ابعت كود المادة",
+      });
+    }
+
+    const normalizedCourseCode = courseCode.trim();
+
+    const students = await Student.find({
+      courseCode: normalizedCourseCode,
+    })
+      .select("+qrToken studentCode fullName courseCode courseName")
+      .sort({ section: 1, studentCode: 1 });
+
+    if (students.length === 0) {
+      return res.status(404).json({
+        error: "لا يوجد طلاب مسجلون في هذه المادة",
+      });
+    }
+
+    const zip = new JSZip();
+
+    for (const student of students) {
+      const imageBuffer = await createStudentQrImage(student);
+
+      const safeCode = String(student.studentCode).replace(
+        /[<>:"/\\|?*\x00-\x1F]/g,
+        "_",
+      );
+
+      const safeName = String(student.fullName || "student")
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
+        .trim();
+
+      zip.file(`${safeCode}_${safeName}.png`, imageBuffer);
+    }
+
+    // إنشاء ملف ZIP كامل قبل إرسال الاستجابة
+    const zipBuffer = await zip.generateAsync({
+      type: "nodebuffer",
+      compression: "DEFLATE",
+      compressionOptions: {
+        level: 6,
+      },
+    });
+
+    res.setHeader("Content-Type", "application/zip");
+
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="student-qrcodes.zip"',
+    );
+
+    res.setHeader("Content-Length", zipBuffer.length);
+
+    return res.end(zipBuffer);
+  } catch (error) {
+    console.error("QR ZIP export error:", error);
+
+    if (!res.headersSent) {
+      return res.status(500).json({
+        error: "تعذر إنشاء ملف صور QR للطلاب",
+      });
+    }
+
+    res.destroy(error);
+  }
+});
+
 router.get("/:studentCode/qr", async (req, res) => {
   try {
     const student = await Student.findOne({
@@ -219,109 +362,6 @@ router.get("/:studentCode/qr", async (req, res) => {
     res.status(500).json({
       error: "تعذر إنشاء QR",
     });
-  }
-});
-
-// Export all students with their QR codes embedded in Excel.
-router.get("/export-qr-excel", async (req, res) => {
-  try {
-    const { courseCode } = req.query;
-
-    // التأكد من إرسال كود المادة
-    if (!courseCode || typeof courseCode !== "string" || !courseCode.trim()) {
-      return res.status(400).json({
-        error: "من فضلك ابعت كود المادة",
-      });
-    }
-
-    const normalizedCourseCode = courseCode.trim();
-
-    // جلب طلاب المادة المطلوبة فقط
-    const students = await Student.find({
-      courseCode: normalizedCourseCode,
-    })
-      .select("+qrToken studentCode fullName courseCode")
-      .sort({ studentCode: 1 });
-
-    if (students.length === 0) {
-      return res.status(404).json({
-        error: "لا يوجد طلاب مسجلون في هذه المادة",
-      });
-    }
-
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Student QR Codes");
-
-    sheet.columns = [
-      { header: "Student Code", key: "studentCode", width: 22 },
-      { header: "Full Name", key: "fullName", width: 35 },
-      { header: "Course Code", key: "courseCode", width: 20 },
-      { header: "QR Code", key: "qr", width: 18 },
-    ];
-
-    sheet.getRow(1).font = { bold: true, size: 12 };
-    sheet.getRow(1).height = 25;
-
-    for (const student of students) {
-      const row = sheet.addRow({
-        studentCode: student.studentCode,
-        fullName: student.fullName,
-        courseCode: student.courseCode,
-      });
-
-      row.height = 85;
-
-      const qrPayload = JSON.stringify({
-        studentCode: student.studentCode,
-        courseCode: student.courseCode,
-        qrToken: student.qrToken,
-      });
-
-      const qrDataUrl = await QRCode.toDataURL(qrPayload, {
-        width: 300,
-        margin: 2,
-        errorCorrectionLevel: "H",
-      });
-
-      const imageId = workbook.addImage({
-        base64: qrDataUrl,
-        extension: "png",
-      });
-
-      sheet.addImage(imageId, {
-        tl: {
-          col: 3,
-          row: row.number - 1,
-        },
-        ext: {
-          width: 300,
-          height: 300,
-        },
-      });
-    }
-
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    );
-
-    res.setHeader(
-      "Content-Disposition",
-      'attachment; filename="student-qrcodes.xlsx"',
-    );
-
-    await workbook.xlsx.write(res);
-    res.end();
-  } catch (error) {
-    console.error("QR Excel export error:", error);
-
-    if (!res.headersSent) {
-      return res.status(500).json({
-        error: "تعذر إنشاء ملف QR للطلاب",
-      });
-    }
-
-    res.destroy(error);
   }
 });
 

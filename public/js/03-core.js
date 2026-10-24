@@ -6,6 +6,9 @@ const logoutBtn = document.getElementById("logoutBtn");
 function showMessage(text, isError = false) {
   messageBox.textContent = text;
   messageBox.className = isError ? "error" : "success";
+  setTimeout(() => {
+    messageBox.className = "hidden";
+  }, 3000);
 }
 
 function showDashboard() {

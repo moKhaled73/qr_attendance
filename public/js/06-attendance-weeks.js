@@ -1,24 +1,27 @@
-// تحديد الأسبوع الحالي لمادة معينة
-
 document.getElementById("setWeekBtn").addEventListener("click", async () => {
-  const courseCode = document.getElementById("courseCode").value.trim();
+  const setWeekBtn = document.getElementById("setWeekBtn");
+  const courseCodeInput = document.getElementById("courseCode");
+  const courseCode = courseCodeInput.value.trim();
   const week = Number(document.getElementById("week").value);
 
   if (!courseCode) {
     showMessage("من فضلك أدخل كود المادة.", true);
-    document.getElementById("courseCode").focus();
+    courseCodeInput.focus();
     return;
   }
+
+  const originalText = setWeekBtn.textContent;
+
+  setWeekBtn.disabled = true;
+  setWeekBtn.textContent = "جاري تحديد الأسبوع...";
 
   try {
     const data = await api("/api/attendance/set-week", {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json",
         "X-Requested-With": "AttendanceApp",
       },
-
       body: JSON.stringify({
         courseCode,
         week,
@@ -30,19 +33,20 @@ document.getElementById("setWeekBtn").addEventListener("click", async () => {
     );
   } catch (error) {
     showMessage(error.message, true);
+  } finally {
+    setWeekBtn.disabled = false;
+    setWeekBtn.textContent = originalText;
   }
 });
 
-// إغلاق أسبوع المادة وتسجيل الغياب
-
 document.getElementById("closeWeekBtn").addEventListener("click", async () => {
-  const courseCode = document.getElementById("courseCode").value.trim();
+  const closeWeekBtn = document.getElementById("closeWeekBtn");
+  const courseCodeInput = document.getElementById("courseCode");
+  const courseCode = courseCodeInput.value.trim();
 
   if (!courseCode) {
     showMessage("من فضلك أدخل كود المادة.", true);
-
-    document.getElementById("courseCode").focus();
-
+    courseCodeInput.focus();
     return;
   }
 
@@ -55,16 +59,18 @@ document.getElementById("closeWeekBtn").addEventListener("click", async () => {
     return;
   }
 
+  const originalText = closeWeekBtn.textContent;
+
+  closeWeekBtn.disabled = true;
+  closeWeekBtn.textContent = "جاري إغلاق الأسبوع وتسجيل الغياب...";
+
   try {
     const data = await api("/api/attendance/close-week", {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json",
-
         "X-Requested-With": "AttendanceApp",
       },
-
       body: JSON.stringify({
         courseCode,
       }),
@@ -76,5 +82,8 @@ document.getElementById("closeWeekBtn").addEventListener("click", async () => {
     );
   } catch (error) {
     showMessage(error.message, true);
+  } finally {
+    closeWeekBtn.disabled = false;
+    closeWeekBtn.textContent = originalText;
   }
 });
